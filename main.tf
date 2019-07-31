@@ -61,7 +61,7 @@ resource "aws_route_table" "private" {
   }
 }
 
-# Explicitely associate the newly created route tables to the private subnets (so they don't default to the main route table)
+# Explicitly associate the newly created route tables to the private subnets (so they don't default to the main route table)
 resource "aws_route_table_association" "private" {
   count          = "${var.az_count}"
   subnet_id      = "${element(aws_subnet.private.*.id, count.index)}"
@@ -81,6 +81,26 @@ resource "aws_security_group" "lb" {
     protocol    = "tcp"
     from_port   = 80
     to_port     = 80
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "ec2" {
+  name        = "tf-ec2-bastion"
+  description = "controls access to the bastion host"
+  vpc_id      = "${aws_vpc.main.id}"
+
+  ingress {
+    protocol    = "tcp"
+    from_port   = 22
+    to_port     = 22
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -117,7 +137,8 @@ resource "aws_security_group" "ecs_tasks" {
 
 resource "aws_alb" "main" {
   name            = "tf-ecs-chat"
-  subnets         = "${aws_subnet.public.*.id}"
+  internal        = true
+  subnets         = "${aws_subnet.private.*.id}"
   security_groups = ["${aws_security_group.lb.id}"]
 }
 
@@ -194,4 +215,19 @@ resource "aws_ecs_service" "main" {
   depends_on = [
     "aws_alb_listener.front_end",
   ]
+}
+
+resource "aws_instance" "fargate-bastion" {
+  ami           = "ami-005bdb005fb00e791"
+  instance_type = "t2.micro"
+  key_name = "${var.key_name}"
+  subnet_id = "${aws_subnet.public.1.id}"
+  security_groups = [
+    "${aws_security_group.lb.id}",
+    "${aws_security_group.ec2.id}",
+  ]
+  tags = {
+    Name     = "fargate-bastion"
+    lifetime = "8h"
+  }
 }

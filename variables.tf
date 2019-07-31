@@ -8,6 +8,10 @@ variable "aws_account_id" {
   default = "puppet-forge"
 }
 
+variable "key_name" {
+  description = "AWS key pair name for ec2 host"
+}
+
 variable "az_count" {
   description = "Number of AZs to cover in a given AWS region"
   default     = "2"
@@ -15,7 +19,7 @@ variable "az_count" {
 
 variable "app_image" {
   description = "Docker image to run in the ECS cluster"
-  default     = "scottyc/web-app:latest"
+  default     = "scottyc/webapp"
 }
 
 variable "app_port" {
@@ -30,10 +34,10 @@ variable "app_count" {
 
 variable "fargate_cpu" {
   description = "Fargate instance CPU units to provision (1 vCPU = 1024 CPU units)"
-  default     = "256"
+  default     = 256
 }
 
 variable "fargate_memory" {
   description = "Fargate instance memory to provision (in MiB)"
-  default     = "256"
+  default     = 512
 }
